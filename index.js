@@ -1,5 +1,5 @@
 const express = require("express");
-const { MongoClient, ServerApiVersion } = require("mongodb");
+const { MongoClient, ServerApiVersion, ObjectId } = require("mongodb");
 const app = express();
 require("dotenv").config();
 const cors = require("cors");
@@ -24,6 +24,79 @@ async function run() {
   try {
     // Connect the client to the server	(optional starting in v4.7)
     await client.connect();
+
+    const servicesCollection = client.db("carDoctor").collection("services");
+    const productsCollection = client.db("carDoctor").collection("products");
+    const teamCollection = client.db("carDoctor").collection("team");
+    const orderCollection = client.db("carDoctor").collection("order");
+
+    app.get("/services", async (req, res) => {
+      const cursor = servicesCollection.find();
+      const result = await cursor.toArray();
+      res.send(result);
+    });
+
+    app.get("/services/:id", async (req, res) => {
+      const id = req.params.id;
+      const query = { _id: new ObjectId(id) };
+      const options = {
+        projection: { title: 1, price: 1, service_id: 1, img: 1 },
+      };
+      const service = await servicesCollection.findOne(query, options);
+      res.send(service);
+    });
+
+    app.get("/products", async (req, res) => {
+      const cursor = productsCollection.find();
+      const result = await cursor.toArray();
+      res.send(result);
+    });
+
+    app.get("/team", async (req, res) => {
+      const cursor = teamCollection.find();
+      const result = await cursor.toArray();
+      res.send(result);
+    });
+
+    //   order
+    app.get("/order", async (req, res) => {
+      // console.log(req.query.email);
+      let query = {};
+      if (req.query?.email) {
+        query = { email: req.query.email };
+      }
+      const result = await orderCollection.find(query).toArray();
+      res.send(result);
+    });
+
+    app.post("/order", async (req, res) => {
+      const order = req.body;
+      // console.log(order);
+      const result = orderCollection.insertOne(order);
+      res.send(result);
+    });
+
+    app.patch("/order/:id", async (req, res) => {
+      const id = req.params.id;
+      const filter = { _id: new ObjectId(id) };
+      const updateOrder = req.body;
+      console.log(updateOrder);
+      const updateDoc = {
+        $set: {
+          status: updateOrder.status,
+        },
+      };
+      const result = await orderCollection.updateOne(filter, updateDoc);
+      res.send(result);
+    });
+
+    app.delete("/order/:id", async (req, res) => {
+      const id = req.params.id;
+      const cursor = { _id: new ObjectId(id) };
+      const result = await orderCollection.deleteOne(cursor);
+      res.send(result);
+    });
+
     // Send a ping to confirm a successful connection
     await client.db("admin").command({ ping: 1 });
     console.log(
@@ -31,7 +104,7 @@ async function run() {
     );
   } finally {
     // Ensures that the client will close when you finish/error
-    await client.close();
+    // await client.close();
   }
 }
 run().catch(console.dir);
